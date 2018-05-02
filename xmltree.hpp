@@ -227,7 +227,7 @@ class XMLTree {
 
 			p_sw.writeStartDocument( "1.0", true );
 
-			p_sw.writeDefaultNamespace( "https::/imise.uni-leipzig.de" );
+            p_sw.writeDefaultNamespace( "https://imise.uni-leipzig.de" );
 
 			p_sw.writeDTD( "<!DOCTYPE fract-wrapper-config>" );
 
@@ -239,6 +239,14 @@ class XMLTree {
 		}
 
 	public:
+
+        void
+        clear( ) {
+
+            delete __root;
+
+            __root = nullptr;
+        }
 
 		bool
 		load( QString const & p_filename ) {
@@ -256,7 +264,25 @@ class XMLTree {
 			QXmlStreamReader
 			xmlSR( &xmlFile );
 
+            if( xmlSR.readNextStartElement( ) ) {
 
+                QXmlStreamAttributes
+                qattr = mlSR.attributes( );
+
+                Attr
+                attr;
+
+                __root = new XMLTag( xmlSR.name( ) );
+
+                for( int i = 0; i < attr.size( ); ++ i ) {
+
+                    attr[ qattr.at( i ).name( ) ] = qattr.at( i ).value( );
+                }
+
+
+
+
+            }
 
 			return false;
 		}

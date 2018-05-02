@@ -47,27 +47,27 @@ main( int p_argc, char * p_argv[ ] ) {
 					xmlTree.addLeave( "id", "2" );
 				xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OD TF" );
+                    xmlTree.addLeave( "alias", "ODTF" );
 					xmlTree.addLeave( "id", "3" );
 				xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OS TF" );
+                    xmlTree.addLeave( "alias", "OSTF" );
 					xmlTree.addLeave( "id", "4" );
 				xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OD A" );
+                    xmlTree.addLeave( "alias", "ODA" );
 					xmlTree.addLeave( "id", "5" );
 				xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OS A" );
+                    xmlTree.addLeave( "alias", "OSA" );
 					xmlTree.addLeave( "id", "6" );
 					xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OD A cond" );
+                    xmlTree.addLeave( "alias", "ODAC" );
 					xmlTree.addLeave( "id", "7" );
 				xmlTree.up( );
 				xmlTree.addTag( "measurement" );
-					xmlTree.addLeave( "alias", "OS A cond" );
+                    xmlTree.addLeave( "alias", "OSAC" );
 					xmlTree.addLeave( "id", "8" );
 				xmlTree.up( );
 			xmlTree.up( );
@@ -97,20 +97,20 @@ main( int p_argc, char * p_argv[ ] ) {
 				xmlTree.addLeave( "id", "0111" );
 				xmlTree.addLeave( "name", "Susi Sorglos" );
 				xmlTree.addLeave( "sex", "female" );
-				xmlTree.addLeave( "prefered-program", "full" );
+                xmlTree.addLeave( "preferred-program", "full" );
 			xmlTree.up( );
 			xmlTree.addTag( "exminator" );
 				xmlTree.addLeave( "id", "0113" );
 				xmlTree.addLeave( "name", "Mandy Vogel" );
 				xmlTree.addLeave( "sex", "female" );
-				xmlTree.addLeave( "prefered-program", "full" );
+                xmlTree.addLeave( "preferred-program", "full conditioned" );
 			xmlTree.up( );
 
 	xmlTree.save( "test.xml" );
 
 	std::cout << xmlTree.toStr( ).toStdString( ) << std::endl;
 
-	xmlTree.clear( );
+    //xmlTree.clear( );
 
 	xmlTree.load( "test.xml" );
 
