@@ -19,3 +19,6 @@ main.cpp
 
 HEADERS += \
 xmltree.hpp
+
+DISTFILES += \
+    ../build-XMLTree-Desktop_71a0cc-Debug/cfg.xml

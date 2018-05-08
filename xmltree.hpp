@@ -11,29 +11,45 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-typedef QMap< QString, QString > Attr;
+//typedef QMap< QString, QString > Attr;
+typedef QXmlStreamAttribute  Attr;
+typedef QXmlStreamAttributes Attrs;
+typedef QXmlStreamNamespaceDeclaration  NSpace;
+typedef QXmlStreamNamespaceDeclarations NSpaces;
 
 class XMLTag;
-
 
 class XMLTag {
 
 	public:
 
 		explicit
-		XMLTag( QString const & p_name, Attr const & p_atrributes, XMLTag * p_parent ) :
-		__parent( p_parent ),
-		__name( p_name ),
-		__attributes( p_atrributes ) {
+		XMLTag( ) :
+		__parent( nullptr ),
+		__name( ),
+		__data( ),
+		__attr( ),
+		__nspace( ) {
 
 		}
 
 		explicit
-		XMLTag( QString const & p_name, Attr const & p_atrributes, QString const & p_data, XMLTag * p_parent ) :
+		XMLTag( QString const & p_name ) :
+		__parent( nullptr ),
+		__name( p_name ),
+		__data( ),
+		__attr( ),
+		__nspace( ) {
+
+		}
+
+		explicit
+		XMLTag( QString const & p_name, XMLTag * p_parent ) :
 		__parent( p_parent ),
 		__name( p_name ),
-		__data( p_data ),
-		__attributes( p_atrributes ) {
+		__data( ),
+		__attr( ),
+		__nspace( ) {
 
 		}
 
@@ -52,8 +68,14 @@ class XMLTag {
 		__name,
 		__data;
 
-		Attr
+/*		Attr
 		__attributes;
+*/
+		Attrs
+		__attr;
+
+		NSpaces
+		__nspace;
 
 		QList< XMLTag * >
 		__children;
@@ -66,16 +88,28 @@ class XMLTag {
 			return __parent;
 		}
 
+		void
+		decouple( ) {
+
+			__children.clear( );
+		}
+
 		QString
 		name( ) const {
 
 			return __name;
 		}
 
-		Attr
-		attr( ) const {
+		Attrs
+		attrs( ) const {
 
-			return __attributes;
+			return __attr;
+		}
+
+		NSpaces
+		nspace( ) const {
+
+			return __nspace;
 		}
 
 		void
@@ -85,45 +119,38 @@ class XMLTag {
 		}
 
 		void
-		setAttr( QString const & p_attrKey, QString const & p_attrVal ) {
+		setAttrs( QXmlStreamAttributes const & p_attrs ) {
 
-			__attributes[ p_attrKey ] = p_attrVal;
+			__attr = p_attrs;
 		}
 
-		QString
-		attr( QString const & p_attrKey ) {
+		void
+		setAttr( QXmlStreamAttribute const & p_attr ) {
 
-			auto
-			found = __attributes.find( p_attrKey );
+			__attr << p_attr;
+		}
 
-			if( found != __attributes.cend( ) ) {
+		void
+		setNSpace( QXmlStreamNamespaceDeclarations const & p_nsd ) {
 
-				return __attributes[ p_attrKey ];
-			}
+			__nspace = p_nsd;
+		}
 
-			return QString( );
+		void
+		setData( QString const & p_data ) {
+
+			__data = p_data;
 		}
 
 		XMLTag
-		* addTag( QString const & p_name, Attr const & p_attr ) {
+		* addTag( QString const & p_name ) {
 
 			XMLTag
-			* nt = new XMLTag( p_name, p_attr, this );
+			* nt = new XMLTag( p_name, this );
 
 			__children.append( nt );
 
 			return nt;
-		}
-
-		XMLTag
-		* addLeave( QString const & p_name, Attr const & p_attr, QString const & p_data ) {
-
-			XMLTag
-			* nl = new XMLTag( p_name, p_attr, p_data, this );
-
-			__children.append( nl );
-
-			return nl;
 		}
 
 		QList< XMLTag * >
@@ -156,24 +183,165 @@ class XMLTag {
 		}
 
 		void
-		write( QXmlStreamWriter & p_sw ) {
+		read( QXmlStreamReader & p_sr ) {
 
-			if( __children.isEmpty( ) && __data.isNull( ) ) {
+			if( p_sr.atEnd( ) ) {
 
 				return;
 			}
 
+			QXmlStreamReader::TokenType
+			token = p_sr.readNext( );
+
+			QXmlStreamAttributes
+			at = p_sr.attributes( );
+
+			QXmlStreamNamespaceDeclarations
+			ns = p_sr.namespaceDeclarations( );
+
+			QString
+			nm = p_sr.name( ).toString( ),
+			ch = p_sr.text( ).toString( ).trimmed( );
+
+			switch( token ) {
+
+				case QXmlStreamReader::NoToken : {
+
+					std::cout << "[No Token]";
+
+					break;
+				}
+
+				case QXmlStreamReader::Invalid : {
+
+					std::cout << "[Invalid]";
+
+					break;
+				}
+
+				case QXmlStreamReader::StartDocument : {
+
+					std::cout << "[StartDocument]";
+
+					break;
+				}
+
+				case QXmlStreamReader::EndDocument : {
+
+					std::cout << "[EndDocument]";
+
+					return;
+				}
+
+				case QXmlStreamReader::StartElement : {
+
+					std::cout << "[StartElement]";
+
+					if( ! nm.isEmpty( ) ) {
+
+						XMLTag
+						* xmlTag = new XMLTag( nm, this );
+
+						xmlTag->setAttrs( at );
+						xmlTag->setNSpace( ns );
+						xmlTag->setData( ch );
+						xmlTag->read( p_sr );
+						__children.append( xmlTag );
+					}
+
+
+					break;
+				}
+
+				case QXmlStreamReader::EndElement : {
+
+					std::cout << "[EndElement]";
+
+					return;
+				}
+
+				case QXmlStreamReader::Characters : {
+
+					std::cout << "[Characters]";
+
+					setData( ch );
+
+					break;
+				}
+
+				case QXmlStreamReader::Comment : {
+
+					std::cout << "[Comment]";
+
+					break;
+				}
+
+				case QXmlStreamReader::DTD : {
+
+					setName( "DTD" );
+					setData( ch );
+
+					std::cout << "[DTD]";
+
+					break;
+				}
+
+				case QXmlStreamReader::EntityReference : {
+
+					std::cout << "[EntityReference]";
+					break;
+				}
+
+				case QXmlStreamReader::ProcessingInstruction : {
+
+					std::cout << "[ProcessingInstruction]";
+					break;
+				}
+
+				default : {
+
+					std::cout << "[default]";
+					break;
+				}
+			}
+
+			if( ! ch.isEmpty( ) ) std::cout << ch.toStdString( );
+
+			if( ! nm.isEmpty( ) ) std::cout << "<" << nm.toStdString( ) << ">";
+
+			read( p_sr );
+		}
+
+		void
+		write( QXmlStreamWriter & p_sw ) {
+
+/*			if( __children.isEmpty( ) && __data.isNull( ) ) {
+
+				return;
+			}*/
+/*
 			QXmlStreamAttributes
 			xmlAttr;
 
-			for( auto s = attr( ).cbegin( ); s != attr( ).cend( ); ++ s ) {
+			for( auto s = attrs( ).cbegin( ); s != attrs( ).cend( ); ++ s ) {
 
 				xmlAttr.append( s.key( ), s.value( ) );
 			}
-
+*/
 			p_sw.writeStartElement( __name );
 
-			p_sw.writeAttributes( xmlAttr );
+			if( ! __nspace.isEmpty( ) ) {
+
+				for( int i = 0; i < __nspace.length( ); ++ i ) {
+
+					p_sw.writeNamespace( __nspace.at( i ).namespaceUri( ).toString( ), __nspace.at( i ).prefix( ).toString( ) );
+				}
+			}
+
+			if( ! __attr.isEmpty( ) ) {
+
+				p_sw.writeAttributes( __attr );
+			}
 
 			if( !__children.isEmpty( ) ) {
 
@@ -184,7 +352,10 @@ class XMLTag {
 			}
 			else {
 
-				p_sw.writeCharacters( __data );
+				if( ! __data.isEmpty( ) ) {
+
+					p_sw.writeCharacters( __data );
+				}
 			}
 
 			p_sw.writeEndElement( );
@@ -199,7 +370,8 @@ class XMLTree {
 
 			__root = nullptr;
 			__curr = __root;
-
+			__dtd = "<!DOCTYPE xml>";
+			__nspc = "https://github.com/samuelohterion";
 		}
 
 		~XMLTree( ) {
@@ -212,6 +384,10 @@ class XMLTree {
 		XMLTag
 		* __root,
 		* __curr;
+
+		QString
+		__dtd,
+		__nspc;
 
 		bool
 		__writeAll( QXmlStreamWriter & p_sw ) {
@@ -227,9 +403,11 @@ class XMLTree {
 
 			p_sw.writeStartDocument( "1.0", true );
 
-            p_sw.writeDefaultNamespace( "https://imise.uni-leipzig.de" );
+			p_sw.writeDefaultNamespace( "https://samuelohterion.github.io/XMLTree" );
 
-			p_sw.writeDTD( "<!DOCTYPE fract-wrapper-config>" );
+			p_sw.writeNamespace( __nspc );
+
+			p_sw.writeDTD( __dtd );
 
 			__root->write( p_sw );
 
@@ -240,18 +418,26 @@ class XMLTree {
 
 	public:
 
-        void
-        clear( ) {
+		XMLTag
+		* curr( ) const {
 
-            delete __root;
+			return __curr;
+		}
 
-            __root = nullptr;
-        }
+		void
+		clear( ) {
+
+			delete __root;
+
+			__root = nullptr;
+		}
 
 		bool
 		load( QString const & p_filename ) {
 
 			delete __root;
+
+			__root = nullptr;
 
 			QFile
 			xmlFile( p_filename );
@@ -264,27 +450,116 @@ class XMLTree {
 			QXmlStreamReader
 			xmlSR( &xmlFile );
 
-            if( xmlSR.readNextStartElement( ) ) {
+			XMLTag
+			* xmlTag = new XMLTag( );
 
-                QXmlStreamAttributes
-                qattr = mlSR.attributes( );
+			xmlTag->read( xmlSR );
 
-                Attr
-                attr;
+			xmlFile.close( );
 
-                __root = new XMLTag( xmlSR.name( ) );
+			if( true || xmlTag->name( ) == "DTD" ) {
 
-                for( int i = 0; i < attr.size( ); ++ i ) {
+				__dtd = xmlTag->data( );
 
-                    attr[ qattr.at( i ).name( ) ] = qattr.at( i ).value( );
-                }
+				__root = xmlTag->children( ).at( 0 );
+
+				xmlTag->decouple( );
+			}
+			else {
+
+				__root = xmlTag;
+			}
 
 
 
+/*
+			if( xmlSR.readNextStartElement( ) ) {
 
-            }
+				switch( xmlSR.tokenType( ) ) {
 
-			return false;
+					case NoToken : {
+
+						break;
+					}
+
+					case Invalid : {
+
+						break;
+					}
+
+					case StartDocument : {
+
+						break;
+					}
+
+					case EndDocument : {
+
+						break;
+					}
+
+					case StartElement : {
+
+						break;
+					}
+
+					case EndElement : {
+
+						break;
+					}
+
+					case Characters : {
+
+						break;
+					}
+
+					case Comment : {
+
+						break;
+					}
+
+					case DTD : {
+
+						break;
+					}
+
+					case EntityReference : {
+
+						break;
+					}
+
+					case ProcessingInstruction : {
+
+						break;
+					}
+
+					default : {
+
+						break;
+					}
+				}
+
+
+				QXmlStreamAttributes
+				qattr = xmlSR.attributes( );
+
+				Attr
+				attr;
+				__root = new XMLTag( xmlSR.name( ).toString( ) );
+
+				for( int i = 0; i < attr.size( ); ++ i ) {
+
+					attr[ qattr.at( i ).name( ).toString( ) ] = qattr.at( i ).value( ).toString( );
+				}
+
+			}
+*/
+			return true;
+		}
+
+		void
+		setDTD( QString const & p_dtd ) {
+
+			__dtd = QString( "<!DOCTYPE %1>" ).arg( p_dtd );
 		}
 
 		bool
@@ -323,56 +598,147 @@ class XMLTree {
 			return text;
 		}
 
-		void
-		addTag( QString const & p_name, Attr const & p_attr ) {
+		XMLTree
+		& addTag( QString const & p_name ) {
 
 			if( ! __root ) {
 
-				__curr  = new XMLTag( p_name, p_attr, nullptr );
+				__curr  = new XMLTag( p_name, nullptr );
+				__root = __curr;
+
+				return *this;
+			}
+
+			__curr = __curr->addTag( p_name );
+
+			return *this;
+		}
+
+		XMLTree
+		& tag( QString const & p_name ) {
+
+			return addTag( p_name );
+		}
+
+		XMLTree
+		& setText( QString const & p_data ) {
+
+			if( __curr ) {
+
+				__curr->setData( p_data );
+			}
+
+			return *this;
+		}
+
+		XMLTree
+		& txt( QString const & p_data ) {
+
+			return setText( p_data );
+		}
+
+		XMLTree
+		& setAttr( Attrs const & p_xmlsa ) {
+
+			if( __curr ) {
+
+				__curr->setAttrs( p_xmlsa );
+			}
+
+			return *this;
+		}
+
+		XMLTree
+		& att( QString const & p_key, QString const & p_value ) {
+
+			__curr->setAttr( Attr( p_key, p_value ) );
+
+			return *this;
+		}
+
+		XMLTree
+		& setNSpace( NSpaces const & p_nsd ) {
+
+			if( __curr ) {
+
+				__curr->setNSpace( p_nsd );
+			}
+
+			return *this;
+		}
+
+		XMLTree
+		& nspc( NSpaces const & p_nsd ) {
+
+			return setNSpace( p_nsd );
+		}
+
+/*		void
+		addTagWithText( QString const & p_name, Attr const & p_attr, QString const & p_data ) {
+
+			if( ! __root ) {
+
+				__curr  = new XMLTag( p_name, p_attr, p_data, nullptr );
 				__root = __curr;
 
 				return;
 			}
 
-			__curr = __curr->addTag( p_name, p_attr );
+			__curr->addTextTag( p_name, p_attr, p_data );
 		}
 
 		void
-		addTag( QString const & p_name ) {
+		addTagWithText( QString const & p_name, QString const & p_data ) {
 
-			addTag( p_name, Attr( ) );
+			addTagWithText( p_name, Attr( ), p_data );
 		}
+*/
+		XMLTree
+		& up( int p_steps = 1 ) {
 
-		void
-		addLeave( QString const & p_name, Attr const & p_attr, QString const & p_data ) {
+			while( p_steps -- ) {
 
-			if( ! __root ) {
-
-				__curr  = new XMLTag( p_name, p_attr, nullptr );
-				__root = __curr;
-
-				return;
+				__curr = __curr->parent( );
 			}
 
-			__curr->addLeave( p_name, p_attr, p_data );
+			return *this;
 		}
 
-		void
-		addLeave( QString const & p_name, QString const & p_data ) {
+		XMLTree
+		& gat( int p_steps = 1 ) {
 
-			addLeave( p_name, Attr( ), p_data );
+			return up( p_steps );
 		}
 
-		void
-		up( ) {
-
-			__curr = __curr->parent( );
-		}
-
-		void
-		resetPointer( ) {
+		XMLTree
+		& resetPointer( ) {
 
 			__curr = __root;
+
+			return *this;
 		}
+
+		XMLTree
+		& rp( ) {
+
+			return resetPointer( );
+		}
+
+		XMLTree
+		& in( QString const & p_name, int p_id = 0 ) {
+
+			for( auto it : __curr->children( ) ) {
+
+				if( it->name( ) == p_name && p_id -- <= 0 ) {
+
+					__curr = it;
+
+					break;
+				}
+			}
+
+			return *this;
+		}
+
 };
 #endif // XMLTREE_HPP
